@@ -53,6 +53,16 @@ def main() -> None:
     app_parser.add_argument("definition", help="Path to YAML definition")
     app_parser.add_argument("--output", "-o", help="Output directory")
 
+    # ── generate ─────────────────────────────────────────────
+    gen_parser = subparsers.add_parser(
+        "generate",
+        help="Generate a self-contained Databricks App bundle from an OpenAPI spec",
+    )
+    gen_parser.add_argument("spec", help="Path or URL to OpenAPI spec")
+    gen_parser.add_argument("--connection", required=True, help="UC connection name")
+    gen_parser.add_argument("--name", default=None, help="Service name (default: derived from spec title)")
+    gen_parser.add_argument("-o", "--output", default=None, help="Output directory")
+
     args = parser.parse_args()
 
     if args.command is None:
@@ -117,6 +127,21 @@ def main() -> None:
 
         result = generate_app(args.definition, output_dir=args.output)
         print(f"Generated DAB at: {result}")
+
+    elif args.command == "generate":
+        from uc_mcp.codegen.generator import generate
+
+        try:
+            result = generate(
+                args.spec,
+                args.connection,
+                service_name=args.name,
+                output_dir=args.output,
+            )
+            print(f"Generated: {result}")
+        except (FileNotFoundError, ValueError) as exc:
+            logger.error(str(exc))
+            sys.exit(1)
 
 
 if __name__ == "__main__":
