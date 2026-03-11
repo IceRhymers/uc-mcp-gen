@@ -5,5 +5,5 @@ resources:
   apps:
     slack:
       name: slack
-      description: MCP server generated from https://raw.githubusercontent.com/slackapi/slack-api-specs/master/web-api/slack_web_openapi_v2.json
+      description: MCP server generated from examples/slack-openapi.yaml
       source_code_path: .
