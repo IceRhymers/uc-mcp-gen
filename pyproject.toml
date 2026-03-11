@@ -6,7 +6,6 @@ dependencies = [
     "mcp>=1.0",
     "databricks-sdk>=0.30.0",
     "pyyaml>=6.0",
-    "jsonschema>=4.0",
 ]
 
 [project.scripts]

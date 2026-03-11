@@ -10,11 +10,38 @@ import pathlib
 import re
 from typing import Any
 
-from uc_mcp.codegen.from_openapi import _load_openapi_spec, _make_tool_name
 from uc_mcp.codegen.python_emitter import _map_type, emit_module
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────
+
+
+def _load_openapi_spec(spec_path: str) -> dict[str, Any]:
+    """Load an OpenAPI spec from a YAML/JSON file or URL.
+
+    Uses yaml.safe_load which handles both YAML and JSON (JSON is valid YAML).
+    """
+    import yaml
+
+    if spec_path.startswith("http://") or spec_path.startswith("https://"):
+        import urllib.request
+        with urllib.request.urlopen(spec_path) as resp:
+            return yaml.safe_load(resp.read())
+    else:
+        with open(spec_path) as f:
+            return yaml.safe_load(f)
+
+
+def _make_tool_name(operation_id: str | None, method: str, path: str) -> str:
+    """Generate a snake_case tool name from operation ID or method+path."""
+    if operation_id:
+        name = operation_id.lower()
+        name = re.sub(r"[^a-z0-9_]", "_", name)
+        name = re.sub(r"_+", "_", name).strip("_")
+        return name
+    segments = [s for s in path.strip("/").split("/") if s]
+    cleaned = [re.sub(r"[{}]", "", seg) for seg in segments]
+    return f"{method.lower()}_{'_'.join(cleaned)}"
 
 
 def _slugify(title: str) -> str:

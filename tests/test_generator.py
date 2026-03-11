@@ -13,6 +13,7 @@ from uc_mcp.codegen.generator import generate
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 SIMPLE_SPEC = FIXTURES / "simple_openapi.yaml"
+SIMPLE_SPEC_JSON = FIXTURES / "simple_openapi.json"
 
 
 class TestGenerateFileTree:
@@ -136,6 +137,36 @@ class TestIdempotency:
         generate(str(SIMPLE_SPEC), "my-conn", output_dir=out)
         # Second call should not raise
         generate(str(SIMPLE_SPEC), "my-conn", output_dir=out)
+
+
+class TestJsonSpecInput:
+    def test_json_spec_produces_same_tool_functions(self, tmp_path):
+        """JSON and YAML equivalents produce the same tool functions in main.py."""
+        out_yaml = str(tmp_path / "from-yaml")
+        out_json = str(tmp_path / "from-json")
+        generate(str(SIMPLE_SPEC), "my-conn", service_name="test-svc", output_dir=out_yaml)
+        generate(str(SIMPLE_SPEC_JSON), "my-conn", service_name="test-svc", output_dir=out_json)
+
+        src_yaml = (pathlib.Path(out_yaml) / "src" / "app" / "main.py").read_text()
+        src_json = (pathlib.Path(out_json) / "src" / "app" / "main.py").read_text()
+
+        # Both should define the same three tool functions
+        for fn in ("list_items", "create_item", "get_item"):
+            assert f"async def {fn}(" in src_yaml
+            assert f"async def {fn}(" in src_json
+
+    def test_json_spec_valid_python(self, tmp_path):
+        result = generate(str(SIMPLE_SPEC_JSON), "my-conn", output_dir=str(tmp_path / "out"))
+        src = (pathlib.Path(result) / "src" / "app" / "main.py").read_text()
+        ast.parse(src)  # raises SyntaxError if invalid
+
+    def test_json_spec_produces_valid_dab(self, tmp_path):
+        result = generate(str(SIMPLE_SPEC_JSON), "my-conn", output_dir=str(tmp_path / "out"))
+        out = pathlib.Path(result)
+        assert (out / "databricks.yml").exists()
+        assert (out / "app.yaml").exists()
+        assert (out / "pyproject.toml").exists()
+        assert (out / "src" / "app" / "main.py").exists()
 
 
 class TestErrorCases:
