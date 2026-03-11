@@ -1,0 +1,10 @@
+command:
+  - uv
+  - run
+  - python
+  - -m
+  - app.main
+
+env:
+  - name: UC_CONNECTION_NAME
+    value: slack

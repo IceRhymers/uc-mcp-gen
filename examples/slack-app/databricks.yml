@@ -1,0 +1,9 @@
+bundle:
+  name: slack
+
+resources:
+  apps:
+    slack:
+      name: slack
+      description: MCP server generated from https://raw.githubusercontent.com/slackapi/slack-api-specs/master/web-api/slack_web_openapi_v2.json
+      source_code_path: .
