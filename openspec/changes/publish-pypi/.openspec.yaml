@@ -1,0 +1,4 @@
+id: publish-pypi
+title: Publish uc-mcp-gen to PyPI
+branch: feat/codegen-generate
+status: proposed
