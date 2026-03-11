@@ -10,7 +10,7 @@ import pathlib
 import re
 from typing import Any
 
-from uc_mcp.codegen.python_emitter import _map_type, emit_module
+from uc_mcp_gen.codegen.python_emitter import _map_type, emit_module
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────

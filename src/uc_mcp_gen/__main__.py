@@ -1,4 +1,4 @@
-"""UC MCP Server CLI entry point."""
+"""uc-mcp-gen CLI entry point."""
 
 from __future__ import annotations
 
@@ -14,11 +14,11 @@ def main() -> None:
         format="%(levelname)s: %(message)s",
         stream=sys.stderr,
     )
-    logger = logging.getLogger("uc-mcp")
+    logger = logging.getLogger("uc-mcp-gen")
 
     parser = argparse.ArgumentParser(
-        prog="uc-mcp",
-        description="UC MCP Server — generate Databricks App bundles from OpenAPI specs",
+        prog="uc-mcp-gen",
+        description="uc-mcp-gen — generate Databricks App bundles from OpenAPI specs",
     )
     subparsers = parser.add_subparsers(dest="command")
 
@@ -39,7 +39,7 @@ def main() -> None:
         sys.exit(1)
 
     if args.command == "generate":
-        from uc_mcp.codegen.generator import generate
+        from uc_mcp_gen.codegen.generator import generate
 
         try:
             result = generate(

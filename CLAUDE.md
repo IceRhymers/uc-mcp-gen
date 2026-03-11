@@ -1,11 +1,11 @@
-# UC MCP Server
+# uc-mcp-gen
 
-CLI tool that compiles an OpenAPI spec into a self-contained Databricks App bundle — a runnable MCP server with one concrete Python function per API operation. No intermediate YAML, no runtime dependency on `uc_mcp`.
+CLI tool that compiles an OpenAPI spec into a self-contained Databricks App bundle — a runnable MCP server with one concrete Python function per API operation. No intermediate YAML, no runtime dependency on `uc_mcp_gen`.
 
 ## Structure
 
 ```
-src/uc_mcp/
+src/uc_mcp_gen/
 ├── __main__.py              CLI (generate subcommand only)
 └── codegen/
     ├── generator.py         OpenAPI spec → Databricks App bundle (DAB) orchestrator
@@ -45,11 +45,11 @@ uv run pytest tests/test_generator.py -v
 uv run pytest -k "test_json_spec" -v
 
 # Run with coverage
-uv run pytest --cov=uc_mcp --cov-report=term-missing
+uv run pytest --cov=uc_mcp_gen --cov-report=term-missing
 
 # Generate a Databricks App bundle from an OpenAPI spec
-uv run uc-mcp generate spec.yaml --connection my-uc-conn -o ./my-app
-uv run uc-mcp generate https://api.example.com/openapi.json --connection my-uc-conn
+uv run uc-mcp-gen generate spec.yaml --connection my-uc-conn -o ./my-app
+uv run uc-mcp-gen generate https://api.example.com/openapi.json --connection my-uc-conn
 ```
 
 ## Generated Bundle Structure

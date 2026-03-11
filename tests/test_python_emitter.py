@@ -6,7 +6,7 @@ import ast
 
 import pytest
 
-from uc_mcp.codegen.python_emitter import (
+from uc_mcp_gen.codegen.python_emitter import (
     _emit_header,
     _emit_path,
     _emit_request_call,

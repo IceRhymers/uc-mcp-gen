@@ -14,7 +14,7 @@ SIMPLE_SPEC = str(FIXTURES / "simple_openapi.yaml")
 
 def _run_main(args: list[str]) -> int:
     """Run main() with given argv, return exit code."""
-    from uc_mcp.__main__ import main
+    from uc_mcp_gen.__main__ import main
     with patch.object(sys, "argv", ["uc-mcp"] + args):
         try:
             main()
@@ -39,7 +39,7 @@ class TestGenerateCliMissingConnection:
 class TestGenerateCliCallsGenerator:
     def test_calls_generator_with_spec(self, tmp_path):
         out = str(tmp_path / "out")
-        with patch("uc_mcp.codegen.generator.generate", return_value=out) as mock_gen:
+        with patch("uc_mcp_gen.codegen.generator.generate", return_value=out) as mock_gen:
             _run_main(["generate", SIMPLE_SPEC, "--connection", "my-conn", "-o", out])
             mock_gen.assert_called_once()
             call_kwargs = mock_gen.call_args
@@ -47,7 +47,7 @@ class TestGenerateCliCallsGenerator:
 
     def test_passes_connection_name(self, tmp_path):
         out = str(tmp_path / "out")
-        with patch("uc_mcp.codegen.generator.generate", return_value=out) as mock_gen:
+        with patch("uc_mcp_gen.codegen.generator.generate", return_value=out) as mock_gen:
             _run_main(["generate", SIMPLE_SPEC, "--connection", "slack-conn", "-o", out])
             mock_gen.assert_called_once()
             args, kwargs = mock_gen.call_args
@@ -55,7 +55,7 @@ class TestGenerateCliCallsGenerator:
 
     def test_passes_output_dir(self, tmp_path):
         out = str(tmp_path / "out")
-        with patch("uc_mcp.codegen.generator.generate", return_value=out) as mock_gen:
+        with patch("uc_mcp_gen.codegen.generator.generate", return_value=out) as mock_gen:
             _run_main(["generate", SIMPLE_SPEC, "--connection", "c", "-o", out])
             mock_gen.assert_called_once()
             args, kwargs = mock_gen.call_args
@@ -63,7 +63,7 @@ class TestGenerateCliCallsGenerator:
 
     def test_passes_service_name_when_given(self, tmp_path):
         out = str(tmp_path / "out")
-        with patch("uc_mcp.codegen.generator.generate", return_value=out) as mock_gen:
+        with patch("uc_mcp_gen.codegen.generator.generate", return_value=out) as mock_gen:
             _run_main(["generate", SIMPLE_SPEC, "--connection", "c", "--name", "my-svc", "-o", out])
             mock_gen.assert_called_once()
             args, kwargs = mock_gen.call_args
@@ -73,21 +73,21 @@ class TestGenerateCliCallsGenerator:
 class TestGenerateCliOutput:
     def test_prints_generated_path_on_success(self, tmp_path, capsys):
         out = str(tmp_path / "out")
-        with patch("uc_mcp.codegen.generator.generate", return_value=out):
+        with patch("uc_mcp_gen.codegen.generator.generate", return_value=out):
             _run_main(["generate", SIMPLE_SPEC, "--connection", "c", "-o", out])
         captured = capsys.readouterr()
         assert out in captured.out
 
     def test_exits_1_on_generator_error(self, tmp_path, capsys):
         out = str(tmp_path / "out")
-        with patch("uc_mcp.codegen.generator.generate", side_effect=ValueError("No operations")):
+        with patch("uc_mcp_gen.codegen.generator.generate", side_effect=ValueError("No operations")):
             code = _run_main(["generate", SIMPLE_SPEC, "--connection", "c", "-o", out])
         assert code == 1
 
     def test_error_message_logged(self, tmp_path, caplog):
         import logging
         out = str(tmp_path / "out")
-        with patch("uc_mcp.codegen.generator.generate", side_effect=ValueError("No operations")):
+        with patch("uc_mcp_gen.codegen.generator.generate", side_effect=ValueError("No operations")):
             with caplog.at_level(logging.ERROR):
                 _run_main(["generate", SIMPLE_SPEC, "--connection", "c", "-o", out])
         assert "No operations" in caplog.text

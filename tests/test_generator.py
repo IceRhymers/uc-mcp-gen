@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from uc_mcp.codegen.generator import generate
+from uc_mcp_gen.codegen.generator import generate
 
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
@@ -66,7 +66,7 @@ class TestServiceNameDerivation:
 
 class TestDefaultOutputDir:
     def test_default_output_dir_uses_service_name(self, tmp_path):
-        with patch("uc_mcp.codegen.generator._default_output_dir") as mock_dir:
+        with patch("uc_mcp_gen.codegen.generator._default_output_dir") as mock_dir:
             mock_dir.return_value = tmp_path / "generated_mcp_servers" / "simple-test-api-app"
             (tmp_path / "generated_mcp_servers" / "simple-test-api-app" / "src" / "app").mkdir(parents=True)
             result = generate(str(SIMPLE_SPEC), "my-conn")

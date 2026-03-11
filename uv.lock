@@ -470,16 +470,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pex"
-version = "2.90.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/61/4a/5df372e6ba5264514577ad3fd377cae037f1c2e64083b0a7c5a449163a36/pex-2.90.3.tar.gz", hash = "sha256:55e30f56b53a2af6b70b71afb8986ca3e46103ba444d8510ab4913bd0b2d35f9", size = 5261001, upload-time = "2026-03-01T03:55:40.244Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/99/a0/cf3d01a731ea2337739fb721e133502a6f361f2c5bf36d54a5b4739e514d/pex-2.90.3-py2.py35.py36.py37.py38.py39.py310.py311-none-any.whl", hash = "sha256:3ba50b1806b03b1d4c18deb5f9025c65bb804722e6c729e4519f15e5b30e5b48", size = 3963175, upload-time = "2026-03-01T03:55:36.662Z" },
-    { url = "https://files.pythonhosted.org/packages/91/f9/07f909b4779b9ec630ccb10a2ad0f68acdc1c11139b208ebf2fec22ca5c7/pex-2.90.3-py3.py312-none-any.whl", hash = "sha256:4e98bf37f23468149ca21c9b95b677535810d62716ca318379284f74db666f51", size = 1762799, upload-time = "2026-03-01T03:55:38.621Z" },
-]
-
-[[package]]
 name = "pluggy"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1104,7 +1094,7 @@ wheels = [
 ]
 
 [[package]]
-name = "uc-mcp-server"
+name = "uc-mcp-gen"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -1115,7 +1105,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "pex" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
 ]
@@ -1129,7 +1118,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pex", specifier = ">=2.1" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-asyncio", specifier = ">=0.23" },
 ]

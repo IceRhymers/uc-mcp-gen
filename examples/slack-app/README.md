@@ -26,7 +26,7 @@ A self-contained MCP server for the Slack Web API, deployed as a Databricks App.
 #    (see examples/slack-openapi.yaml)
 
 # 3. Generate the Databricks App bundle
-uc-mcp generate examples/slack-openapi.yaml \
+uc-mcp-gen generate examples/slack-openapi.yaml \
   --connection slack \
   --name slack \
   -o examples/slack-app
@@ -35,7 +35,7 @@ uc-mcp generate examples/slack-openapi.yaml \
 To regenerate after modifying `slack-openapi.yaml`:
 
 ```bash
-uc-mcp generate examples/slack-openapi.yaml --connection slack --name slack -o examples/slack-app
+uc-mcp-gen generate examples/slack-openapi.yaml --connection slack --name slack -o examples/slack-app
 ```
 
 ## Prerequisites

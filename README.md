@@ -1,25 +1,29 @@
-# uc-mcp-server
+# uc-mcp-gen
 
 A CLI that compiles an OpenAPI spec directly into a self-contained [Databricks App](https://docs.databricks.com/en/dev-tools/databricks-apps/index.html) bundle — a runnable MCP server with one concrete Python function per API operation. Auth and routing are handled by a [Databricks Unity Catalog connection](https://docs.databricks.com/en/connect/unity-catalog/index.html).
 
 ## How It Works
 
-1. Point `uc-mcp generate` at an OpenAPI spec (local file or URL, YAML or JSON)
+1. Point `uc-mcp-gen generate` at an OpenAPI spec (local file or URL, YAML or JSON)
 2. Provide a UC connection name
 3. Get a self-contained Databricks App bundle back — ready to deploy with `databricks bundle deploy`
 
-The generated `main.py` has zero dependency on `uc_mcp`. It's a plain FastMCP server where every API operation becomes a typed `async def` tool function, with all HTTP calls proxied through your UC connection.
+The generated `main.py` has zero dependency on `uc_mcp_gen`. It's a plain FastMCP server where every API operation becomes a typed `async def` tool function, with all HTTP calls proxied through your UC connection.
 
 ## Install
 
 ```bash
+# Run without installing (recommended)
+uvx uc-mcp-gen generate ...
+
+# Or install locally for development
 uv sync
 ```
 
 ## Usage
 
 ```bash
-uc-mcp generate <spec> --connection <conn-name> [--name <service-name>] [-o <output-dir>]
+uc-mcp-gen generate <spec> --connection <conn-name> [--name <service-name>] [-o <output-dir>]
 ```
 
 **Arguments:**
@@ -35,13 +39,13 @@ uc-mcp generate <spec> --connection <conn-name> [--name <service-name>] [-o <out
 
 ```bash
 # From a local YAML spec
-uc-mcp generate openapi.yaml --connection my-slack-conn -o ./slack-app
+uc-mcp-gen generate openapi.yaml --connection my-slack-conn -o ./slack-app
 
 # From a local JSON spec
-uc-mcp generate openapi.json --connection my-api-conn
+uc-mcp-gen generate openapi.json --connection my-api-conn
 
 # From a remote spec
-uc-mcp generate https://api.example.com/openapi.yaml --connection my-conn -o ./example-app
+uc-mcp-gen generate https://api.example.com/openapi.yaml --connection my-conn -o ./example-app
 ```
 
 ## Generated Bundle
