@@ -29,11 +29,13 @@
 
 ## 4. Remove unused dependencies and fixtures
 
-- [ ] 4.1 Remove `jsonschema>=4.0` from `pyproject.toml` dependencies
+- [ ] 4.1 Remove `jsonschema>=4.0` from `pyproject.toml` dependencies (keep `pyyaml`)
 - [ ] 4.2 Delete `definitions/` directory
 - [ ] 4.3 Delete `tests/fixtures/simple_definition.yaml`
 - [ ] 4.4 Delete `tests/fixtures/slack_definition.yaml`
 - [ ] 4.5 Delete `tests/fixtures/invalid_definitions/`
+- [ ] 4.6 Add `tests/fixtures/simple_openapi.json` — JSON equivalent of `simple_openapi.yaml`
+- [ ] 4.7 Add test to `test_generator.py`: `generate()` with JSON fixture produces valid DAB with same tool functions
 
 ## 5. Update docs
 

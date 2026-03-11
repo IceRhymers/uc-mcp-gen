@@ -26,9 +26,17 @@ The YAML interpreter path was the original architecture: a runtime engine that r
 
 The deleted test files (`test_schema.py`, `test_connection.py`, `test_engine.py`, `test_server.py`, `test_from_openapi.py`, `test_app_generator.py`) cover only the deleted modules. There is no partial overlap with the remaining code. File deletion is the correct action — no surgical test removal needed.
 
-### D3: `pyyaml` stays as a generator dependency (spec loading)
+### D3: `pyyaml` stays; both JSON and YAML OpenAPI specs are supported
 
-`generator.py` calls `yaml.safe_load()` to load OpenAPI specs in YAML format. `pyyaml` must remain in `pyproject.toml`. It is removed only as a **runtime dependency of generated apps** — the generated `pyproject.toml` already excludes it, and this change doesn't affect that.
+`generator.py` uses `yaml.safe_load()` to load OpenAPI specs. Because JSON is a strict subset of YAML, `yaml.safe_load()` correctly parses both `.json` and `.yaml`/`.yml` files without any branching logic. `pyyaml` must remain in `pyproject.toml`.
+
+This means `uc-mcp generate` accepts:
+- `spec.yaml` / `spec.yml` — YAML OpenAPI spec (file)
+- `spec.json` — JSON OpenAPI spec (file)
+- `https://api.example.com/openapi.yaml` — YAML spec via URL
+- `https://api.example.com/openapi.json` — JSON spec via URL
+
+A `tests/fixtures/simple_openapi.json` fixture is added and `test_generator.py` gains a scenario asserting JSON spec input produces identical output to the equivalent YAML spec. `pyyaml` is removed only as a **runtime dependency of generated apps** — the generated `pyproject.toml` already excludes it.
 
 ### D4: `jsonschema` is removed entirely
 

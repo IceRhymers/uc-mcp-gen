@@ -52,9 +52,18 @@ The following must not exist after this change:
 
 Behaviour is identical to the original implementations.
 
-### R6: `pyproject.toml` — remove `jsonschema`
+### R6: `pyproject.toml` — remove `jsonschema`, keep `pyyaml`
 
-`jsonschema` is removed from the `dependencies` list. `pyyaml` remains (used by `generator.py` for spec loading). `mcp`, `databricks-sdk` remain unchanged.
+`jsonschema` is removed from the `dependencies` list. `pyyaml` remains — `generator.py` uses `yaml.safe_load()` which handles both JSON and YAML OpenAPI specs (JSON is valid YAML). `mcp`, `databricks-sdk` remain unchanged.
+
+### R6a: Both JSON and YAML OpenAPI spec files are accepted
+
+`_load_openapi_spec()` in `generator.py` accepts:
+- Local YAML files (`.yaml`, `.yml`)
+- Local JSON files (`.json`)
+- Remote YAML or JSON URLs
+
+A `tests/fixtures/simple_openapi.json` fixture is added containing the same spec as `simple_openapi.yaml`. `test_generator.py` includes a test asserting that `generate()` called with the JSON fixture produces a valid DAB with the same tool functions as the YAML fixture.
 
 ### R7: All remaining tests pass
 
@@ -98,9 +107,11 @@ Installation, how-it-works, and auth sections updated accordingly. No references
 | S2 | `ls src/uc_mcp/codegen/` | Only `__init__.py`, `generator.py`, `python_emitter.py` |
 | S3 | `uc-mcp --help` | Only `generate` listed |
 | S4 | `uc-mcp serve ...` | Command not found error |
-| S5 | `uv run pytest -v` | 69 passed, 0 failed |
-| S6 | `cat pyproject.toml` | No `jsonschema` in dependencies |
+| S5 | `uv run pytest -v` | 70 passed, 0 failed |
+| S6 | `cat pyproject.toml` | No `jsonschema`; `pyyaml` present |
 | S7 | Generated `main.py` | Contains `_ForwardedTokenMiddleware` and `CONNECTION_NAME` |
 | S8 | `ls definitions/` | Directory does not exist |
 | S9 | `import uc_mcp.schema` | ImportError |
 | S10 | `import uc_mcp.codegen.from_openapi` | ImportError |
+| S11 | `generate(simple_openapi.json, ...)` | Valid DAB, same tool functions as YAML input |
+| S12 | `generate(https://.../openapi.json, ...)` | URL JSON spec loads and generates correctly |
