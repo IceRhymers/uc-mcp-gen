@@ -1,50 +1,32 @@
-# UC MCP Server
+# uc-mcp-gen
 
-Data-driven framework that proxies HTTP APIs through Databricks UC connections. YAML definitions are the adapters — no per-service Python code.
+CLI tool that compiles an OpenAPI spec into a self-contained Databricks App bundle — a runnable MCP server with one concrete Python function per API operation. No intermediate YAML, no runtime dependency on `uc_mcp_gen`.
 
 ## Structure
 
 ```
-src/uc_mcp/
-├── __main__.py              CLI (serve, validate, from-openapi, build, app)
-├── schema.py                YAML definition validation (jsonschema + dataclasses)
-├── connection.py            UCConnection wrapping w.serving_endpoints.http_request()
-├── engine.py                Dynamic tool registration: YAML → MCP tools
-├── server.py                Assembles MCP Server from definition + connection
-├── _schema.yaml             JSON Schema governing all definitions
+src/uc_mcp_gen/
+├── __main__.py              CLI (generate subcommand only)
 └── codegen/
-    ├── app_generator.py     Generate self-contained Databricks App bundle
-    └── from_openapi.py      OpenAPI spec → YAML definition
-definitions/                 YAML adapter definitions (the "code" for each service)
-├── _schema.yaml             JSON Schema for definitions
-└── slack.yaml               Slack tools
-tests/                       pytest test suite
-├── conftest.py              Shared fixtures (mock WorkspaceClient, paths)
-├── test_schema.py           Schema validation
-├── test_connection.py       UCConnection with mocked Databricks SDK
-├── test_engine.py           Dynamic tool registration + handler execution
-├── test_server.py           Integration: YAML → running MCP server
-├── test_from_openapi.py     OpenAPI → YAML conversion
-├── test_app_generator.py    App bundle generation
-└── fixtures/                Test YAML definitions
+    ├── generator.py         OpenAPI spec → Databricks App bundle (DAB) orchestrator
+    └── python_emitter.py    Internal tool defs → main.py source string
+tests/
+├── test_python_emitter.py   41 tests for python_emitter.py
+├── test_generator.py        22 tests for generator.py
+├── test_generate_cli.py     9 tests for __main__.py
+└── fixtures/
+    ├── simple_openapi.yaml  YAML OpenAPI fixture (3 operations)
+    └── simple_openapi.json  JSON OpenAPI fixture (same spec)
 ```
 
 ## Module Dependency Chain
 
-Changes flow downward. Always start tests at the lowest affected layer.
-
 ```
-schema.py          ← Foundation: dataclasses + validation
+python_emitter.py   ← Foundation: type mapping + code emission
     ↓
-connection.py      ← Transport: UCConnection wraps Databricks SDK
+generator.py        ← Orchestration: spec loading, tool extraction, file writing
     ↓
-engine.py          ← Core: dynamic tool registration from parsed YAML
-    ↓
-server.py          ← Assembly: wires engine + connection into MCP Server
-    ↓
-__main__.py        ← CLI: subcommands calling the above
-    ↓
-codegen/*.py       ← Generation: OpenAPI spec → YAML definitions, app bundles
+__main__.py         ← CLI: generate subcommand calling generator.generate()
 ```
 
 ## Key Commands
@@ -57,42 +39,54 @@ uv sync
 uv run pytest -v
 
 # Run one test file
-uv run pytest tests/test_engine.py -v
+uv run pytest tests/test_generator.py -v
 
 # Run one test by name
-uv run pytest -k "test_build_path_simple" -v
+uv run pytest -k "test_json_spec" -v
 
 # Run with coverage
-uv run pytest --cov=uc_mcp --cov-report=term-missing
+uv run pytest --cov=uc_mcp_gen --cov-report=term-missing
 
-# Validate a definition
-uv run uc-mcp validate definitions/slack.yaml
-
-# Serve (manual testing against a real Databricks workspace)
-uv run uc-mcp serve definitions/slack.yaml -v
-
-# Generate from OpenAPI spec
-uv run uc-mcp from-openapi spec.json --connection conn-name -o output.yaml
-
-# Generate Databricks App bundle
-uv run uc-mcp app definitions/slack.yaml -o generated_mcp_servers/slack-app
+# Generate a Databricks App bundle from an OpenAPI spec
+uv run uc-mcp-gen generate spec.yaml --connection my-uc-conn -o ./my-app
+uv run uc-mcp-gen generate https://api.example.com/openapi.json --connection my-uc-conn
 ```
 
-## Adding a New Service
+## Generated Bundle Structure
 
-1. Create `definitions/<service>.yaml` following `definitions/_schema.yaml`
-2. Validate: `uv run uc-mcp validate definitions/<service>.yaml`
-3. Add test fixtures and TDD cycle (see below)
+```
+<output>/
+├── databricks.yml           Databricks Asset Bundle manifest
+├── app.yaml                 Databricks App config (sets UC_CONNECTION_NAME env var)
+├── pyproject.toml           App project (mcp, databricks-sdk, starlette, uvicorn)
+└── src/app/
+    ├── __init__.py
+    └── main.py              Self-contained FastMCP server — no uc_mcp dependency
+```
 
 ## TDD Workflow
 
-All changes follow RED → GREEN → REFACTOR. Use `/uc-mcp-tdd` skill for guided TDD.
+All changes follow RED → GREEN → REFACTOR.
 
 | Change Area | Test File | Source File |
-|------------|-----------|-------------|
-| YAML schema, dataclasses, validation | `test_schema.py` | `schema.py` |
-| HTTP transport, request/response | `test_connection.py` | `connection.py` |
-| Tool registration, path building, response formatting | `test_engine.py` | `engine.py` |
-| MCP server assembly, end-to-end | `test_server.py` | `server.py` |
-| OpenAPI conversion | `test_from_openapi.py` | `codegen/from_openapi.py` |
-| App bundle generation | `test_app_generator.py` | `codegen/app_generator.py` |
+|---|---|---|
+| Type mapping, code emission, signatures | `test_python_emitter.py` | `codegen/python_emitter.py` |
+| Spec loading, tool extraction, file tree | `test_generator.py` | `codegen/generator.py` |
+| CLI subcommand, argument parsing | `test_generate_cli.py` | `__main__.py` |
+
+## Adding Support for a New OpenAPI Feature
+
+1. Add a failing test in the appropriate test file (RED)
+2. Implement minimum change in `python_emitter.py` or `generator.py` (GREEN)
+3. Run `uv run pytest -v` — all tests must pass
+4. Refactor if needed, keeping tests green
+
+## Auth in Generated Code
+
+The emitted `main.py` includes:
+
+- `_ForwardedTokenMiddleware` — extracts `X-Forwarded-Access-Token` header, stores in context var
+- `_get_workspace_client()` — returns per-user `WorkspaceClient(token=..., auth_type="pat")` when token present, Databricks Model Serving credentials as fallback, default `WorkspaceClient()` as final fallback
+- All tool calls routed through `client.serving_endpoints.http_request(conn=CONNECTION_NAME, ...)`
+
+`CONNECTION_NAME` is set at generation time from `--connection` and injected into the app via `UC_CONNECTION_NAME` environment variable (configured in `app.yaml`).
