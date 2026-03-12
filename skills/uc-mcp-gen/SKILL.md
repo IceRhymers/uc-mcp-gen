@@ -1,6 +1,11 @@
 ---
 name: uc-mcp-gen
-description: Use when generating, deploying, or troubleshooting a Databricks App MCP server from an OpenAPI spec. Covers uc-mcp-gen CLI usage, Unity Catalog connections, Databricks Apps, and bundle deployment.
+description: >
+  Generate, deploy, or troubleshoot a Databricks App MCP server from an OpenAPI spec.
+  Use this when working with uc-mcp-gen CLI, Unity Catalog connections, Databricks Apps,
+  or bundle deployment. Covers the full generate → deploy workflow and key Databricks concepts.
+user-invocable: true
+allowed-tools: Bash, Read
 ---
 
 # uc-mcp-gen: Generate MCP Servers for Databricks
