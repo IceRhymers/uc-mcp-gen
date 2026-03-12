@@ -1,0 +1,9 @@
+{
+  "name": "uc-mcp-gen",
+  "description": "Generate and deploy Databricks App MCP servers from OpenAPI specs via Unity Catalog connections",
+  "version": "0.1.1",
+  "author": {
+    "name": "IceRhymers"
+  },
+  "skills": "./skills/"
+}
