@@ -1,0 +1,13 @@
+{
+  "name": "uc-mcp-gen",
+  "description": "Generate and deploy Databricks App MCP servers from OpenAPI specs via Unity Catalog connections",
+  "version": "0.1.1",
+  "author": {
+    "name": "IceRhymers",
+    "url": "https://github.com/IceRhymers"
+  },
+  "homepage": "https://github.com/IceRhymers/uc-mcp-gen",
+  "repository": "https://github.com/IceRhymers/uc-mcp-gen",
+  "license": "MIT",
+  "keywords": ["databricks", "mcp", "openapi", "unity-catalog", "codegen", "databricks-apps"]
+}
