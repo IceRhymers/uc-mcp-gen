@@ -1,6 +1,6 @@
 [project]
 name = "uc-mcp-gen"
-version = "0.1.0"
+version = "0.1.1"
 description = "Generate Databricks App MCP servers from OpenAPI specs"
 requires-python = ">=3.10"
 dependencies = [
