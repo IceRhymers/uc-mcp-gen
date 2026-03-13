@@ -93,12 +93,32 @@ def _emit_tool_function(tool: dict) -> str:
     sig = _emit_signature(tool)
     request_call = _emit_request_call(tool)
 
+    # Build docstring with param descriptions
+    param_docs = [
+        p for p in tool.get("all_params", [])
+        if p.get("description")
+    ]
+
     lines: list[str] = [
         "@mcp.tool()",
         sig,
     ]
-    if description:
-        lines.append(f'    """{description}"""')
+    if description or param_docs:
+        if description and param_docs:
+            lines.append(f'    """{description}')
+            lines.append("")
+            lines.append("    Args:")
+            for p in param_docs:
+                lines.append(f"        {p['name']}: {p['description']}")
+            lines.append('    """')
+        elif description:
+            lines.append(f'    """{description}"""')
+        else:
+            lines.append('    """')
+            lines.append("    Args:")
+            for p in param_docs:
+                lines.append(f"        {p['name']}: {p['description']}")
+            lines.append('    """')
     lines.append(f"    {request_call}")
 
     return "\n".join(lines) + "\n\n"
