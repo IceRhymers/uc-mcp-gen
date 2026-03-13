@@ -14,6 +14,7 @@ from uc_mcp_gen.codegen.generator import generate
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 SIMPLE_SPEC = FIXTURES / "simple_openapi.yaml"
 SIMPLE_SPEC_JSON = FIXTURES / "simple_openapi.json"
+SWAGGER2_STYLE = FIXTURES / "swagger2_style.yaml"
 
 
 class TestGenerateFileTree:
@@ -30,14 +31,54 @@ class TestGenerateFileTree:
         result = generate(str(SIMPLE_SPEC), "my-conn", output_dir=str(tmp_path / "out"))
         assert not (pathlib.Path(result) / "definitions").exists()
 
-    def test_no_scripts_dir(self, tmp_path):
+    def test_deploy_script_exists(self, tmp_path):
         result = generate(str(SIMPLE_SPEC), "my-conn", output_dir=str(tmp_path / "out"))
-        assert not (pathlib.Path(result) / "scripts").exists()
+        assert (pathlib.Path(result) / "scripts" / "deploy.sh").exists()
+
+    def test_deploy_script_is_executable(self, tmp_path):
+        result = generate(str(SIMPLE_SPEC), "my-conn", output_dir=str(tmp_path / "out"))
+        deploy = pathlib.Path(result) / "scripts" / "deploy.sh"
+        import os, stat
+        assert os.stat(deploy).st_mode & stat.S_IEXEC
 
     def test_returns_output_path(self, tmp_path):
         out = tmp_path / "my-out"
         result = generate(str(SIMPLE_SPEC), "my-conn", output_dir=str(out))
         assert pathlib.Path(result).resolve() == out.resolve()
+
+
+class TestDeployScript:
+    def test_deploy_script_has_subcommands(self, tmp_path):
+        result = generate(str(SIMPLE_SPEC), "my-conn", output_dir=str(tmp_path / "out"))
+        content = (pathlib.Path(result) / "scripts" / "deploy.sh").read_text()
+        for cmd in ("validate", "deploy", "start", "stop", "app-deploy", "full"):
+            assert cmd in content
+
+    def test_deploy_script_uses_databricks_cli(self, tmp_path):
+        result = generate(str(SIMPLE_SPEC), "my-conn", output_dir=str(tmp_path / "out"))
+        content = (pathlib.Path(result) / "scripts" / "deploy.sh").read_text()
+        assert "databricks bundle" in content
+        assert "databricks apps" in content
+
+    def test_deploy_script_has_shebang(self, tmp_path):
+        result = generate(str(SIMPLE_SPEC), "my-conn", output_dir=str(tmp_path / "out"))
+        content = (pathlib.Path(result) / "scripts" / "deploy.sh").read_text()
+        assert content.startswith("#!/usr/bin/env bash")
+
+    def test_deploy_script_no_target_flag(self, tmp_path):
+        result = generate(str(SIMPLE_SPEC), "my-conn", output_dir=str(tmp_path / "out"))
+        content = (pathlib.Path(result) / "scripts" / "deploy.sh").read_text()
+        assert "-t " not in content
+        assert "--target" not in content
+
+    def test_deploy_script_idempotent(self, tmp_path):
+        out1 = str(tmp_path / "run1")
+        out2 = str(tmp_path / "run2")
+        generate(str(SIMPLE_SPEC), "my-conn", service_name="my-svc", output_dir=out1)
+        generate(str(SIMPLE_SPEC), "my-conn", service_name="my-svc", output_dir=out2)
+        c1 = (pathlib.Path(out1) / "scripts" / "deploy.sh").read_text()
+        c2 = (pathlib.Path(out2) / "scripts" / "deploy.sh").read_text()
+        assert c1 == c2
 
 
 class TestServiceNameDerivation:
@@ -127,7 +168,7 @@ class TestIdempotency:
         generate(str(SIMPLE_SPEC), "my-conn", service_name="my-svc", output_dir=out1)
         generate(str(SIMPLE_SPEC), "my-conn", service_name="my-svc", output_dir=out2)
 
-        for fname in ["databricks.yml", "app.yaml", "pyproject.toml"]:
+        for fname in ["databricks.yml", "app.yaml", "pyproject.toml", "scripts/deploy.sh"]:
             c1 = (pathlib.Path(out1) / fname).read_text()
             c2 = (pathlib.Path(out2) / fname).read_text()
             assert c1 == c2, f"{fname} differs between runs"
@@ -167,6 +208,77 @@ class TestJsonSpecInput:
         assert (out / "app.yaml").exists()
         assert (out / "pyproject.toml").exists()
         assert (out / "src" / "app" / "main.py").exists()
+
+
+class TestSwagger2StyleParams:
+    """Specs where param type is at param['type'] instead of param['schema']['type']."""
+
+    def test_param_types_not_dict(self, tmp_path):
+        result = generate(str(SWAGGER2_STYLE), "my-conn", output_dir=str(tmp_path / "out"))
+        src = (pathlib.Path(result) / "src" / "app" / "main.py").read_text()
+        # channel should be str, limit should be int — never dict
+        assert "channel: str" in src
+        assert "limit: int" in src
+        assert "channel: dict" not in src
+        assert "limit: dict" not in src
+
+    def test_header_params_excluded(self, tmp_path):
+        result = generate(str(SWAGGER2_STYLE), "my-conn", output_dir=str(tmp_path / "out"))
+        src = (pathlib.Path(result) / "src" / "app" / "main.py").read_text()
+        # token is in:header — should not appear as a tool parameter
+        assert "token: str" not in src
+        assert "token: dict" not in src
+
+    def test_auth_token_query_params_excluded(self, tmp_path, tmp_path_factory):
+        """Token params in query position should also be excluded — UC connection handles auth."""
+        spec_file = tmp_path_factory.mktemp("specs") / "token_query.yaml"
+        spec_file.write_text("""\
+openapi: "3.0.0"
+info:
+  title: Token Query API
+  version: "1.0.0"
+paths:
+  /items:
+    get:
+      operationId: list_items
+      summary: List items
+      parameters:
+        - name: token
+          in: query
+          required: true
+          type: string
+          description: Authentication token
+        - name: limit
+          in: query
+          required: false
+          type: integer
+""")
+        result = generate(str(spec_file), "my-conn", output_dir=str(tmp_path / "out"))
+        src = (pathlib.Path(result) / "src" / "app" / "main.py").read_text()
+        assert "token" not in src.split("async def list_items(")[1].split(")")[0]
+        assert "limit: int" in src
+
+    def test_formdata_params_sent_as_body(self, tmp_path):
+        """formData params on POST should be sent in the request body."""
+        result = generate(str(SWAGGER2_STYLE), "my-conn", output_dir=str(tmp_path / "out"))
+        src = (pathlib.Path(result) / "src" / "app" / "main.py").read_text()
+        # send_message has channel and text as formData — should appear in body=
+        send_fn = src.split("async def send_message(")[1].split("@mcp.tool()")[0]
+        assert "body=" in send_fn
+        assert '"channel": channel' in send_fn
+        assert '"text": text' in send_fn
+
+    def test_formdata_params_not_in_query(self, tmp_path):
+        """formData params should not leak into query_params."""
+        result = generate(str(SWAGGER2_STYLE), "my-conn", output_dir=str(tmp_path / "out"))
+        src = (pathlib.Path(result) / "src" / "app" / "main.py").read_text()
+        send_fn = src.split("async def send_message(")[1].split("@mcp.tool()")[0]
+        assert "query_params=" not in send_fn
+
+    def test_valid_python(self, tmp_path):
+        result = generate(str(SWAGGER2_STYLE), "my-conn", output_dir=str(tmp_path / "out"))
+        src = (pathlib.Path(result) / "src" / "app" / "main.py").read_text()
+        ast.parse(src)
 
 
 class TestErrorCases:

@@ -1,0 +1,64 @@
+openapi: "3.0.0"
+info:
+  title: Swagger2 Style API
+  version: "1.0.0"
+paths:
+  /messages:
+    get:
+      operationId: list_messages
+      summary: List messages
+      parameters:
+        - name: token
+          in: header
+          required: true
+          type: string
+          description: Authentication token
+        - name: channel
+          in: query
+          required: true
+          type: string
+          description: Channel ID
+        - name: limit
+          in: query
+          required: false
+          type: integer
+          description: Max results
+    post:
+      operationId: send_message
+      summary: Send a message
+      parameters:
+        - name: token
+          in: header
+          required: true
+          type: string
+          description: Authentication token
+        - name: channel
+          in: formData
+          required: true
+          type: string
+          description: Channel to send to
+        - name: text
+          in: formData
+          required: true
+          type: string
+          description: Message text
+        - name: as_user
+          in: formData
+          required: false
+          type: boolean
+          description: Post as authed user
+  /messages/{ts}:
+    post:
+      operationId: delete_message
+      summary: Delete a message
+      parameters:
+        - name: ts
+          in: path
+          required: true
+          type: string
+          description: Message timestamp
+        - name: channel
+          in: formData
+          required: true
+          type: string
+          description: Channel containing the message

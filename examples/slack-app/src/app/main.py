@@ -23,7 +23,7 @@ import contextlib
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-mcp = FastMCP("slack")
+mcp = FastMCP("slack-web-api")
 CONNECTION_NAME = "slack"
 
 _METHOD_MAP = {
@@ -106,109 +106,266 @@ def _create_app() -> Starlette:
 
 
 @mcp.tool()
-async def auth_test(token: dict) -> str:
+async def auth_test() -> str:
     """Checks authentication & identity."""
     return _uc_request("GET", "/auth.test")
 
 @mcp.tool()
-async def chat_delete(token: dict | None = None, ts: dict | None = None, channel: dict | None = None, as_user: dict | None = None) -> str:
-    """Deletes a message."""
-    return _uc_request("POST", "/chat.delete")
+async def chat_delete(ts: float = 0, channel: str | None = None, as_user: bool = False) -> str:
+    """Deletes a message.
+
+    Args:
+        ts: Timestamp of the message to be deleted.
+        channel: Channel containing the message to be deleted.
+        as_user: Pass true to delete the message as the authed user with `chat:write:user` scope. [Bot users](/bot-users) in this context are considered authed users. If unused or false, the message will be deleted with `chat:write:bot` scope.
+    """
+    return _uc_request("POST", "/chat.delete", body={"ts": ts, "channel": channel, "as_user": as_user})
 
 @mcp.tool()
-async def chat_getpermalink(token: dict, channel: dict, message_ts: dict) -> str:
-    """Retrieve a permalink URL for a specific extant message"""
-    return _uc_request("GET", "/chat.getPermalink", query_params={"token": token, "channel": channel, "message_ts": message_ts})
+async def chat_getpermalink(channel: str, message_ts: str) -> str:
+    """Retrieve a permalink URL for a specific extant message
+
+    Args:
+        channel: The ID of the conversation or channel containing the message
+        message_ts: A message's `ts` value, uniquely identifying it within a channel
+    """
+    return _uc_request("GET", "/chat.getPermalink", query_params={"channel": channel, "message_ts": message_ts})
 
 @mcp.tool()
-async def chat_postephemeral(token: dict, channel: dict, user: dict, as_user: dict | None = None, attachments: dict | None = None, blocks: dict | None = None, icon_emoji: dict | None = None, icon_url: dict | None = None, link_names: dict | None = None, parse: dict | None = None, text: dict | None = None, thread_ts: dict | None = None, username: dict | None = None) -> str:
-    """Sends an ephemeral message to a user in a channel."""
-    return _uc_request("POST", "/chat.postEphemeral")
+async def chat_postephemeral(channel: str, user: str, as_user: bool = False, attachments: str | None = None, blocks: str | None = None, icon_emoji: str | None = None, icon_url: str | None = None, link_names: bool = False, parse: str | None = None, text: str | None = None, thread_ts: str | None = None, username: str | None = None) -> str:
+    """Sends an ephemeral message to a user in a channel.
+
+    Args:
+        channel: Channel, private group, or IM channel to send message to. Can be an encoded ID, or a name.
+        user: `id` of the user who will receive the ephemeral message. The user should be in the channel specified by the `channel` argument.
+        as_user: Pass true to post the message as the authed user. Defaults to true if the chat:write:bot scope is not included. Otherwise, defaults to false.
+        attachments: A JSON-based array of structured attachments, presented as a URL-encoded string.
+        blocks: A JSON-based array of structured blocks, presented as a URL-encoded string.
+        icon_emoji: Emoji to use as the icon for this message. Overrides `icon_url`. Must be used in conjunction with `as_user` set to `false`, otherwise ignored. See [authorship](#authorship) below.
+        icon_url: URL to an image to use as the icon for this message. Must be used in conjunction with `as_user` set to false, otherwise ignored. See [authorship](#authorship) below.
+        link_names: Find and link channel names and usernames.
+        parse: Change how messages are treated. Defaults to `none`. See [below](#formatting).
+        text: How this field works and whether it is required depends on other fields you use in your API call. [See below](#text_usage) for more detail.
+        thread_ts: Provide another message's `ts` value to post this message in a thread. Avoid using a reply's `ts` value; use its parent's value instead. Ephemeral messages in threads are only shown if there is already an active thread.
+        username: Set your bot's user name. Must be used in conjunction with `as_user` set to false, otherwise ignored. See [authorship](#authorship) below.
+    """
+    return _uc_request("POST", "/chat.postEphemeral", body={"as_user": as_user, "attachments": attachments, "blocks": blocks, "channel": channel, "icon_emoji": icon_emoji, "icon_url": icon_url, "link_names": link_names, "parse": parse, "text": text, "thread_ts": thread_ts, "user": user, "username": username})
 
 @mcp.tool()
-async def chat_postmessage(token: dict, channel: dict, as_user: dict | None = None, attachments: dict | None = None, blocks: dict | None = None, icon_emoji: dict | None = None, icon_url: dict | None = None, link_names: dict | None = None, mrkdwn: dict | None = None, parse: dict | None = None, reply_broadcast: dict | None = None, text: dict | None = None, thread_ts: dict | None = None, unfurl_links: dict | None = None, unfurl_media: dict | None = None, username: dict | None = None) -> str:
-    """Sends a message to a channel."""
-    return _uc_request("POST", "/chat.postMessage")
+async def chat_postmessage(channel: str, as_user: str | None = None, attachments: str | None = None, blocks: str | None = None, icon_emoji: str | None = None, icon_url: str | None = None, link_names: bool = False, mrkdwn: bool = False, parse: str | None = None, reply_broadcast: bool = False, text: str | None = None, thread_ts: str | None = None, unfurl_links: bool = False, unfurl_media: bool = False, username: str | None = None) -> str:
+    """Sends a message to a channel.
+
+    Args:
+        channel: Channel, private group, or IM channel to send message to. Can be an encoded ID, or a name. See [below](#channels) for more details.
+        as_user: Pass true to post the message as the authed user, instead of as a bot. Defaults to false. See [authorship](#authorship) below.
+        attachments: A JSON-based array of structured attachments, presented as a URL-encoded string.
+        blocks: A JSON-based array of structured blocks, presented as a URL-encoded string.
+        icon_emoji: Emoji to use as the icon for this message. Overrides `icon_url`. Must be used in conjunction with `as_user` set to `false`, otherwise ignored. See [authorship](#authorship) below.
+        icon_url: URL to an image to use as the icon for this message. Must be used in conjunction with `as_user` set to false, otherwise ignored. See [authorship](#authorship) below.
+        link_names: Find and link channel names and usernames.
+        mrkdwn: Disable Slack markup parsing by setting to `false`. Enabled by default.
+        parse: Change how messages are treated. Defaults to `none`. See [below](#formatting).
+        reply_broadcast: Used in conjunction with `thread_ts` and indicates whether reply should be made visible to everyone in the channel or conversation. Defaults to `false`.
+        text: How this field works and whether it is required depends on other fields you use in your API call. [See below](#text_usage) for more detail.
+        thread_ts: Provide another message's `ts` value to make this message a reply. Avoid using a reply's `ts` value; use its parent instead.
+        unfurl_links: Pass true to enable unfurling of primarily text-based content.
+        unfurl_media: Pass false to disable unfurling of media content.
+        username: Set your bot's user name. Must be used in conjunction with `as_user` set to false, otherwise ignored. See [authorship](#authorship) below.
+    """
+    return _uc_request("POST", "/chat.postMessage", body={"as_user": as_user, "attachments": attachments, "blocks": blocks, "channel": channel, "icon_emoji": icon_emoji, "icon_url": icon_url, "link_names": link_names, "mrkdwn": mrkdwn, "parse": parse, "reply_broadcast": reply_broadcast, "text": text, "thread_ts": thread_ts, "unfurl_links": unfurl_links, "unfurl_media": unfurl_media, "username": username})
 
 @mcp.tool()
-async def chat_update(token: dict, channel: dict, ts: dict, as_user: dict | None = None, attachments: dict | None = None, blocks: dict | None = None, link_names: dict | None = None, parse: dict | None = None, text: dict | None = None) -> str:
-    """Updates a message."""
-    return _uc_request("POST", "/chat.update")
+async def chat_update(channel: str, ts: str, as_user: str | None = None, attachments: str | None = None, blocks: str | None = None, link_names: str | None = None, parse: str | None = None, text: str | None = None) -> str:
+    """Updates a message.
+
+    Args:
+        channel: Channel containing the message to be updated.
+        ts: Timestamp of the message to be updated.
+        as_user: Pass true to update the message as the authed user. [Bot users](/bot-users) in this context are considered authed users.
+        attachments: A JSON-based array of structured attachments, presented as a URL-encoded string. This field is required when not presenting `text`. If you don't include this field, the message's previous `attachments` will be retained. To remove previous `attachments`, include an empty array for this field.
+        blocks: A JSON-based array of [structured blocks](/block-kit/building), presented as a URL-encoded string. If you don't include this field, the message's previous `blocks` will be retained. To remove previous `blocks`, include an empty array for this field.
+        link_names: Find and link channel names and usernames. Defaults to `none`. If you do not specify a value for this field, the original value set for the message will be overwritten with the default, `none`.
+        parse: Change how messages are treated. Defaults to `client`, unlike `chat.postMessage`. Accepts either `none` or `full`. If you do not specify a value for this field, the original value set for the message will be overwritten with the default, `client`.
+        text: New text for the message, using the [default formatting rules](/reference/surfaces/formatting). It's not required when presenting `blocks` or `attachments`.
+    """
+    return _uc_request("POST", "/chat.update", body={"as_user": as_user, "attachments": attachments, "blocks": blocks, "channel": channel, "link_names": link_names, "parse": parse, "text": text, "ts": ts})
 
 @mcp.tool()
-async def conversations_history(token: dict | None = None, channel: dict | None = None, latest: dict | None = None, oldest: dict | None = None, inclusive: dict | None = None, limit: dict | None = None, cursor: dict | None = None) -> str:
-    """Fetches a conversation's history of messages and events."""
-    return _uc_request("GET", "/conversations.history", query_params={"token": token, "channel": channel, "latest": latest, "oldest": oldest, "inclusive": inclusive, "limit": limit, "cursor": cursor})
+async def conversations_history(channel: str | None = None, latest: float = 0, oldest: float = 0, inclusive: bool = False, limit: int = 0, cursor: str | None = None) -> str:
+    """Fetches a conversation's history of messages and events.
+
+    Args:
+        channel: Conversation ID to fetch history for.
+        latest: End of time range of messages to include in results.
+        oldest: Start of time range of messages to include in results.
+        inclusive: Include messages with latest or oldest timestamp in results only when either timestamp is specified.
+        limit: The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the users list hasn't been reached.
+        cursor: Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first "page" of the collection. See [pagination](/docs/pagination) for more detail.
+    """
+    return _uc_request("GET", "/conversations.history", query_params={"channel": channel, "latest": latest, "oldest": oldest, "inclusive": inclusive, "limit": limit, "cursor": cursor})
 
 @mcp.tool()
-async def conversations_info(token: dict | None = None, channel: dict | None = None, include_locale: dict | None = None, include_num_members: dict | None = None) -> str:
-    """Retrieve information about a conversation."""
-    return _uc_request("GET", "/conversations.info", query_params={"token": token, "channel": channel, "include_locale": include_locale, "include_num_members": include_num_members})
+async def conversations_info(channel: str | None = None, include_locale: bool = False, include_num_members: bool = False) -> str:
+    """Retrieve information about a conversation.
+
+    Args:
+        channel: Conversation ID to learn more about
+        include_locale: Set this to `true` to receive the locale for this conversation. Defaults to `false`
+        include_num_members: Set to `true` to include the member count for the specified conversation. Defaults to `false`
+    """
+    return _uc_request("GET", "/conversations.info", query_params={"channel": channel, "include_locale": include_locale, "include_num_members": include_num_members})
 
 @mcp.tool()
-async def conversations_join(token: dict | None = None, channel: dict | None = None) -> str:
-    """Joins an existing conversation."""
-    return _uc_request("POST", "/conversations.join")
+async def conversations_join(channel: str | None = None) -> str:
+    """Joins an existing conversation.
+
+    Args:
+        channel: ID of conversation to join
+    """
+    return _uc_request("POST", "/conversations.join", body={"channel": channel})
 
 @mcp.tool()
-async def conversations_list(token: dict | None = None, exclude_archived: dict | None = None, types: dict | None = None, limit: dict | None = None, cursor: dict | None = None) -> str:
-    """Lists all channels in a Slack team."""
-    return _uc_request("GET", "/conversations.list", query_params={"token": token, "exclude_archived": exclude_archived, "types": types, "limit": limit, "cursor": cursor})
+async def conversations_list(exclude_archived: bool = False, types: str | None = None, limit: int = 0, cursor: str | None = None) -> str:
+    """Lists all channels in a Slack team.
+
+    Args:
+        exclude_archived: Set to `true` to exclude archived channels from the list
+        types: Mix and match channel types by providing a comma-separated list of any combination of `public_channel`, `private_channel`, `mpim`, `im`
+        limit: The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the list hasn't been reached. Must be an integer no larger than 1000.
+        cursor: Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first "page" of the collection. See [pagination](/docs/pagination) for more detail.
+    """
+    return _uc_request("GET", "/conversations.list", query_params={"exclude_archived": exclude_archived, "types": types, "limit": limit, "cursor": cursor})
 
 @mcp.tool()
-async def conversations_members(token: dict | None = None, channel: dict | None = None, limit: dict | None = None, cursor: dict | None = None) -> str:
-    """Retrieve members of a conversation."""
-    return _uc_request("GET", "/conversations.members", query_params={"token": token, "channel": channel, "limit": limit, "cursor": cursor})
+async def conversations_members(channel: str | None = None, limit: int = 0, cursor: str | None = None) -> str:
+    """Retrieve members of a conversation.
+
+    Args:
+        channel: ID of the conversation to retrieve members for
+        limit: The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the users list hasn't been reached.
+        cursor: Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first "page" of the collection. See [pagination](/docs/pagination) for more detail.
+    """
+    return _uc_request("GET", "/conversations.members", query_params={"channel": channel, "limit": limit, "cursor": cursor})
 
 @mcp.tool()
-async def conversations_replies(token: dict | None = None, channel: dict | None = None, ts: dict | None = None, latest: dict | None = None, oldest: dict | None = None, inclusive: dict | None = None, limit: dict | None = None, cursor: dict | None = None) -> str:
-    """Retrieve a thread of messages posted to a conversation"""
-    return _uc_request("GET", "/conversations.replies", query_params={"token": token, "channel": channel, "ts": ts, "latest": latest, "oldest": oldest, "inclusive": inclusive, "limit": limit, "cursor": cursor})
+async def conversations_replies(channel: str | None = None, ts: float = 0, latest: float = 0, oldest: float = 0, inclusive: bool = False, limit: int = 0, cursor: str | None = None) -> str:
+    """Retrieve a thread of messages posted to a conversation
+
+    Args:
+        channel: Conversation ID to fetch thread from.
+        ts: Unique identifier of a thread's parent message. `ts` must be the timestamp of an existing message with 0 or more replies. If there are no replies then just the single message referenced by `ts` will return - it is just an ordinary, unthreaded message.
+        latest: End of time range of messages to include in results.
+        oldest: Start of time range of messages to include in results.
+        inclusive: Include messages with latest or oldest timestamp in results only when either timestamp is specified.
+        limit: The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the users list hasn't been reached.
+        cursor: Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first "page" of the collection. See [pagination](/docs/pagination) for more detail.
+    """
+    return _uc_request("GET", "/conversations.replies", query_params={"channel": channel, "ts": ts, "latest": latest, "oldest": oldest, "inclusive": inclusive, "limit": limit, "cursor": cursor})
 
 @mcp.tool()
-async def files_info(token: dict | None = None, file: dict | None = None, count: dict | None = None, page: dict | None = None, limit: dict | None = None, cursor: dict | None = None) -> str:
-    """Gets information about a file."""
-    return _uc_request("GET", "/files.info", query_params={"token": token, "file": file, "count": count, "page": page, "limit": limit, "cursor": cursor})
+async def files_info(file: str | None = None, count: str | None = None, page: str | None = None, limit: int = 0, cursor: str | None = None) -> str:
+    """Gets information about a file.
+
+    Args:
+        file: Specify a file by providing its ID.
+        limit: The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the list hasn't been reached.
+        cursor: Parameter for pagination. File comments are paginated for a single file. Set `cursor` equal to the `next_cursor` attribute returned by the previous request's `response_metadata`. This parameter is optional, but pagination is mandatory: the default value simply fetches the first "page" of the collection of comments. See [pagination](/docs/pagination) for more details.
+    """
+    return _uc_request("GET", "/files.info", query_params={"file": file, "count": count, "page": page, "limit": limit, "cursor": cursor})
 
 @mcp.tool()
-async def files_list(token: dict | None = None, user: dict | None = None, channel: dict | None = None, ts_from: dict | None = None, ts_to: dict | None = None, types: dict | None = None, count: dict | None = None, page: dict | None = None, show_files_hidden_by_limit: dict | None = None) -> str:
-    """List for a team, in a channel, or from a user with applied filters."""
-    return _uc_request("GET", "/files.list", query_params={"token": token, "user": user, "channel": channel, "ts_from": ts_from, "ts_to": ts_to, "types": types, "count": count, "page": page, "show_files_hidden_by_limit": show_files_hidden_by_limit})
+async def files_list(user: str | None = None, channel: str | None = None, ts_from: float = 0, ts_to: float = 0, types: str | None = None, count: str | None = None, page: str | None = None, show_files_hidden_by_limit: bool = False) -> str:
+    """List for a team, in a channel, or from a user with applied filters.
+
+    Args:
+        user: Filter files created by a single user.
+        channel: Filter files appearing in a specific channel, indicated by its ID.
+        ts_from: Filter files created after this timestamp (inclusive).
+        ts_to: Filter files created before this timestamp (inclusive).
+        types: Filter files by type ([see below](#file_types)). You can pass multiple values in the types argument, like `types=spaces,snippets`.The default value is `all`, which does not filter the list.
+        show_files_hidden_by_limit: Show truncated file info for files hidden due to being too old, and the team who owns the file being over the file limit.
+    """
+    return _uc_request("GET", "/files.list", query_params={"user": user, "channel": channel, "ts_from": ts_from, "ts_to": ts_to, "types": types, "count": count, "page": page, "show_files_hidden_by_limit": show_files_hidden_by_limit})
 
 @mcp.tool()
-async def reactions_add(channel: dict, name: dict, timestamp: dict, token: dict) -> str:
-    """Adds a reaction to an item."""
-    return _uc_request("POST", "/reactions.add")
+async def reactions_add(channel: str, name: str, timestamp: str) -> str:
+    """Adds a reaction to an item.
+
+    Args:
+        channel: Channel where the message to add reaction to was posted.
+        name: Reaction (emoji) name.
+        timestamp: Timestamp of the message to add reaction to.
+    """
+    return _uc_request("POST", "/reactions.add", body={"channel": channel, "name": name, "timestamp": timestamp})
 
 @mcp.tool()
-async def reactions_get(token: dict, channel: dict | None = None, file: dict | None = None, file_comment: dict | None = None, full: dict | None = None, timestamp: dict | None = None) -> str:
-    """Gets reactions for an item."""
-    return _uc_request("GET", "/reactions.get", query_params={"token": token, "channel": channel, "file": file, "file_comment": file_comment, "full": full, "timestamp": timestamp})
+async def reactions_get(channel: str | None = None, file: str | None = None, file_comment: str | None = None, full: bool = False, timestamp: str | None = None) -> str:
+    """Gets reactions for an item.
+
+    Args:
+        channel: Channel where the message to get reactions for was posted.
+        file: File to get reactions for.
+        file_comment: File comment to get reactions for.
+        full: If true always return the complete reaction list.
+        timestamp: Timestamp of the message to get reactions for.
+    """
+    return _uc_request("GET", "/reactions.get", query_params={"channel": channel, "file": file, "file_comment": file_comment, "full": full, "timestamp": timestamp})
 
 @mcp.tool()
-async def reactions_remove(token: dict, name: dict, file: dict | None = None, file_comment: dict | None = None, channel: dict | None = None, timestamp: dict | None = None) -> str:
-    """Removes a reaction from an item."""
-    return _uc_request("POST", "/reactions.remove")
+async def reactions_remove(name: str, file: str | None = None, file_comment: str | None = None, channel: str | None = None, timestamp: str | None = None) -> str:
+    """Removes a reaction from an item.
+
+    Args:
+        name: Reaction (emoji) name.
+        file: File to remove reaction from.
+        file_comment: File comment to remove reaction from.
+        channel: Channel where the message to remove reaction from was posted.
+        timestamp: Timestamp of the message to remove reaction from.
+    """
+    return _uc_request("POST", "/reactions.remove", body={"name": name, "file": file, "file_comment": file_comment, "channel": channel, "timestamp": timestamp})
 
 @mcp.tool()
-async def search_messages(token: dict, query: dict, count: dict | None = None, highlight: dict | None = None, page: dict | None = None, sort: dict | None = None, sort_dir: dict | None = None) -> str:
-    """Searches for messages matching a query."""
-    return _uc_request("GET", "/search.messages", query_params={"token": token, "count": count, "highlight": highlight, "page": page, "query": query, "sort": sort, "sort_dir": sort_dir})
+async def search_messages(query: str, count: int = 0, highlight: bool = False, page: int = 0, sort: str | None = None, sort_dir: str | None = None) -> str:
+    """Searches for messages matching a query.
+
+    Args:
+        query: Search query.
+        count: Pass the number of results you want per "page". Maximum of `100`.
+        highlight: Pass a value of `true` to enable query highlight markers (see below).
+        sort: Return matches sorted by either `score` or `timestamp`.
+        sort_dir: Change sort direction to ascending (`asc`) or descending (`desc`).
+    """
+    return _uc_request("GET", "/search.messages", query_params={"count": count, "highlight": highlight, "page": page, "query": query, "sort": sort, "sort_dir": sort_dir})
 
 @mcp.tool()
-async def users_getpresence(token: dict, user: dict | None = None) -> str:
-    """Gets user presence information."""
-    return _uc_request("GET", "/users.getPresence", query_params={"token": token, "user": user})
+async def users_getpresence(user: str | None = None) -> str:
+    """Gets user presence information.
+
+    Args:
+        user: User to get presence info on. Defaults to the authed user.
+    """
+    return _uc_request("GET", "/users.getPresence", query_params={"user": user})
 
 @mcp.tool()
-async def users_info(token: dict, include_locale: dict | None = None, user: dict | None = None) -> str:
-    """Gets information about a user."""
-    return _uc_request("GET", "/users.info", query_params={"token": token, "include_locale": include_locale, "user": user})
+async def users_info(include_locale: bool = False, user: str | None = None) -> str:
+    """Gets information about a user.
+
+    Args:
+        include_locale: Set this to `true` to receive the locale for this user. Defaults to `false`
+        user: User to get info on
+    """
+    return _uc_request("GET", "/users.info", query_params={"include_locale": include_locale, "user": user})
 
 @mcp.tool()
-async def users_list(token: dict | None = None, limit: dict | None = None, cursor: dict | None = None, include_locale: dict | None = None) -> str:
-    """Lists all users in a Slack team."""
-    return _uc_request("GET", "/users.list", query_params={"token": token, "limit": limit, "cursor": cursor, "include_locale": include_locale})
+async def users_list(limit: int = 0, cursor: str | None = None, include_locale: bool = False) -> str:
+    """Lists all users in a Slack team.
+
+    Args:
+        limit: The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the users list hasn't been reached. Providing no `limit` value will result in Slack attempting to deliver you the entire result set. If the collection is too large you may experience `limit_required` or HTTP 500 errors.
+        cursor: Paginate through collections of data by setting the `cursor` parameter to a `next_cursor` attribute returned by a previous request's `response_metadata`. Default value fetches the first "page" of the collection. See [pagination](/docs/pagination) for more detail.
+        include_locale: Set this to `true` to receive the locale for users. Defaults to `false`
+    """
+    return _uc_request("GET", "/users.list", query_params={"limit": limit, "cursor": cursor, "include_locale": include_locale})
 
 if __name__ == "__main__":
     uvicorn.run(_create_app(), host="0.0.0.0", port=8000)

@@ -258,6 +258,35 @@ class TestEmitToolFunction:
         fn = _emit_tool_function(t)
         assert "return _uc_request(" in fn
 
+    def test_docstring_includes_param_descriptions(self):
+        t = _tool(all_params=[
+            {"name": "channel", "type": "str", "required": True, "description": "Channel ID to fetch"},
+            {"name": "limit", "type": "int", "required": False, "description": "Max results to return"},
+        ])
+        fn = _emit_tool_function(t)
+        assert "channel: Channel ID to fetch" in fn
+        assert "limit: Max results to return" in fn
+
+    def test_docstring_skips_params_without_description(self):
+        t = _tool(all_params=[
+            {"name": "channel", "type": "str", "required": True, "description": "Channel ID"},
+            {"name": "limit", "type": "int", "required": False, "description": ""},
+        ])
+        fn = _emit_tool_function(t)
+        assert "channel: Channel ID" in fn
+        # limit has no description so should not appear in the Args section
+        assert "        limit:" not in fn
+
+    def test_docstring_with_params_is_valid_python(self):
+        t = _tool(description="List messages", all_params=[
+            {"name": "channel", "type": "str", "required": True, "description": "The channel ID"},
+            {"name": "limit", "type": "int", "required": False, "description": "Max results"},
+        ])
+        fn = _emit_tool_function(t)
+        # Wrap in a stub module so ast.parse can validate
+        src = "async def stub():\n    pass\n" + fn
+        ast.parse(src)
+
 
 # ── TestEmitModule ────────────────────────────────────────────────────────
 
