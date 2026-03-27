@@ -156,6 +156,8 @@ resources:
       name: {service_name}
       description: MCP server generated from {spec_source}
       source_code_path: .
+      user_api_scopes:
+        - serving.serving-endpoints
 """
 
 

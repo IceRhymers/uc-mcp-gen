@@ -7,3 +7,5 @@ resources:
       name: slack-web-api
       description: MCP server generated from examples/slack-openapi.yaml
       source_code_path: .
+      user_api_scopes:
+        - serving.serving-endpoints
