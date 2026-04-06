@@ -93,6 +93,12 @@ class TestServiceNameDerivation:
         yml = (pathlib.Path(result) / "databricks.yml").read_text()
         assert "simple-test-api" in yml
 
+    def test_user_api_scopes_serving_in_databricks_yml(self, tmp_path):
+        result = generate(str(SIMPLE_SPEC), "my-conn", output_dir=str(tmp_path / "out"))
+        yml = (pathlib.Path(result) / "databricks.yml").read_text()
+        assert "user_api_scopes" in yml
+        assert "serving.serving-endpoints" in yml
+
     def test_derived_name_is_kebab_case(self, tmp_path):
         result = generate(str(SIMPLE_SPEC), "my-conn", output_dir=str(tmp_path / "out"))
         out = pathlib.Path(result)
